@@ -21,13 +21,13 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import java.util.HashMap;
+import java.util.Objects;
 
 import static android.app.Activity.RESULT_OK;
 
@@ -115,9 +115,10 @@ public class addfrag extends Fragment {
                     if (e2.getText().toString().isEmpty() || e3.getText().toString().isEmpty()) {
                         Toast.makeText(v.getContext(), "Oops you left field empty", Toast.LENGTH_SHORT).show();
                     } else {
-                        c++;
-                        q.put(String.valueOf(c), e2.getText().toString());
-                        String answer = "ANS" + String.valueOf(c);
+                        c+=1;
+                        String questions = "q" + String.valueOf(c);
+                        q.put(questions, e2.getText().toString());
+                        String answer = "a" + String.valueOf(c);
                         q.put(answer, e3.getText().toString());
                         e1.setText(" ");
                         e2.setText(" ");
@@ -132,7 +133,17 @@ public class addfrag extends Fragment {
             @Override
             public void onClick(View view) {
                 FirebaseFirestore fb = FirebaseFirestore.getInstance();
-                fb.collection("Tests").document(ntname).set(q);
+                fb.collection("Test").document(cTitle).set(q).addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Toast.makeText(getContext(), "Test Saved", Toast.LENGTH_SHORT).show();
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Toast.makeText(getContext(), "Failed", Toast.LENGTH_SHORT).show();
+                    }
+                });
                 Toast.makeText(v.getContext(), " Launched", Toast.LENGTH_SHORT).show();
                 //getFragmentManager().beginTransaction().replace(R.layout.home_layout, fragholder).commit();
             }
@@ -153,12 +164,12 @@ public class addfrag extends Fragment {
         });
 
         //Image Button
-       /* imageLink.setOnClickListener(new View.OnClickListener() {
+       imageLink.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 getImageFromGallery();
             }
-        });*/
+        });
     }
 
     private void getVideoFromGallery() {
@@ -167,15 +178,16 @@ public class addfrag extends Fragment {
         imgIntent.setAction(Intent.ACTION_GET_CONTENT);
         startActivityForResult(imgIntent, GET_VIDEO_REQUEST);
     }
-    /*private void getImageFromGallery() {
+    private void getImageFromGallery() {
         Intent imgIntent = new Intent();
         imgIntent.setType("image/*");
         imgIntent.setAction(Intent.ACTION_GET_CONTENT);
-        startActivityForResult(imgIntent, GET_VIDEO_REQUEST);
-    }*/
+        startActivityForResult(imgIntent, GET_IMAGE_REQUEST);
+    }
 
-    private String getFileExtension(Uri uri) {
-        ContentResolver cR = getActivity().getApplicationContext().getContentResolver();
+    private String getFileExtension(Uri uri)
+    {
+        ContentResolver cR = Objects.requireNonNull(getActivity()).getApplicationContext().getContentResolver();
         MimeTypeMap mime = MimeTypeMap.getSingleton();
         return mime.getExtensionFromMimeType(cR.getType(uri));
     }
@@ -187,27 +199,24 @@ public class addfrag extends Fragment {
         if (requestCode == GET_IMAGE_REQUEST || requestCode == GET_VIDEO_REQUEST || resultCode == RESULT_OK || data != null || data.getData() != null) {
             if (requestCode == GET_VIDEO_REQUEST) {
                 mVideoUri = data.getData();
-            } /*else {
+                uploadToStorage();
+            }
+            if  (requestCode == GET_IMAGE_REQUEST) {
                 mImageUri = data.getData();
-            }*/
-            uploadToStorage();
+                uploadToStorage();
+                Toast.makeText(getContext(), mImageUri.toString(), Toast.LENGTH_SHORT).show();
+            }
         }
 
     }
 
-    private void uploadToStorage() {
-
-        if (mVideoUri != null || mImageUri != null) {
+    private void uploadToStorage()
+    {
+        if(mVideoUri!=null && c == 0)
+        {
+            c += 1;
             final StorageReference fileReference = mStorageRef.child(System.currentTimeMillis() + "." + getFileExtension(mVideoUri));
-
-            if (mVideoUri != null) {
-                commonUri = mVideoUri;
-
-            } /*else {
-                commonUri = mImageUri;
-                flag++;
-            }*/
-            fileReference.putFile(commonUri)
+            fileReference.putFile(mVideoUri)
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
@@ -216,14 +225,14 @@ public class addfrag extends Fragment {
                                 @Override
                                 public void onSuccess(Uri uri) {
                                     //download URI
-                                    if (flag == -1) {
+
                                         dbVideoURI = uri.toString();//
                                         Toast.makeText(getActivity(), "Update successful", Toast.LENGTH_LONG).show();
-                                    } /*else {
-                                        dbImageURI = uri.toString();*/
-                                    // funcTest();
-                                    //Toast.makeText(getActivity(), "Update successful", Toast.LENGTH_LONG).show();
-                                    // }
+
+//                                        dbImageURI = uri.toString();
+//                                    // funcTest();
+//                                    Toast.makeText(getActivity(), "Update successful", Toast.LENGTH_LONG).show();
+
                                     //funcTest();
                                 }
                             }).addOnFailureListener(new OnFailureListener() {
@@ -243,7 +252,46 @@ public class addfrag extends Fragment {
                     Log.e("Error", e.toString());
                     Toast.makeText(getActivity(), "Oops :(", Toast.LENGTH_SHORT).show();
                 }
-            });
+            });}
+            else if (mImageUri != null && c == 1)
+            {
+                c = 0;
+                final StorageReference fileReference1 = mStorageRef.child(System.currentTimeMillis() + "." + getFileExtension(mImageUri));
+                fileReference1.putFile(mImageUri)
+                    .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+
+                            fileReference1.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+                                @Override
+                                public void onSuccess(Uri uri) {
+                                    //download URI
+
+
+                                        dbImageURI = uri.toString();
+                                        // funcTest();
+                                        Toast.makeText(getActivity(), "Update successful", Toast.LENGTH_LONG).show();
+
+                                    //funcTest();
+                                }
+                            }).addOnFailureListener(new OnFailureListener() {
+                                @Override
+                                public void onFailure(@NonNull Exception e) {
+                                    Log.e("Update failed :(", e.toString() + "");
+                                    Toast.makeText(getActivity(), "Oops :(", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+
+
+//                            saveDataLocally(1);
+                        }
+                    }).addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception e) {
+                    Log.e("Error", e.toString());
+                    Toast.makeText(getActivity(), "Oops :(", Toast.LENGTH_SHORT).show();
+                }
+            });}
 
 //            fileReference.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
 //                @Override
@@ -252,20 +300,16 @@ public class addfrag extends Fragment {
 //                }
 //            });
 
-        } else {
-            Toast.makeText(getActivity(), "No file selected", Toast.LENGTH_SHORT).show();
         }
-    }
 
     private void funcTest() {
-        //1 time
 
 
         HashMap<String, Object> hashMap = new HashMap<>();
         hashMap.put("description", cDescription);
         hashMap.put("name", cTitle);
         hashMap.put("video_url", dbVideoURI);
-        hashMap.put("img_url", null);
+        hashMap.put("img_url", dbImageURI);
 
         db.collection("Courses").document(cTitle).set(hashMap)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
